@@ -1,0 +1,28 @@
+pipeline:
+
+  tags:
+    image: hub.go-nerd.de/groot/tools
+    environment:
+    - REPO=groot/nginx-webdav
+    - REGISTRY=https://hub.go-nerd.de
+    commands:
+    - docker-ls tags $${REPO} --registry $${REGISTRY} --basic-auth --user $${REGISTRY_USER} --password $${REGISTRY_PASS} --json | jq --raw-output '.Tags | .[]' | grep -v "latest" | sort -r | tail -n +2 > tags.txt
+    secrets: [ REGISTRY_USER, REGISTRY_PASS ]
+
+  digest:
+    image: hub.go-nerd.de/groot/tools
+    environment:
+    - REPO=groot/nginx-webdav
+    - REGISTRY=https://hub.go-nerd.de
+    commands:
+    - for TAG in $(cat tags.txt); do docker-ls tag $${REPO}:$TAG --registry $${REGISTRY} --basic-auth --user $${REGISTRY_USER} --password $${REGISTRY_PASS} --json | jq --raw-output '.ContentDigest'; done > digests.txt
+    secrets: [ REGISTRY_USER, REGISTRY_PASS ]
+
+  clean:
+    image: hub.go-nerd.de/groot/tools
+    environment:
+    - REPO=groot/nginx-webdav
+    - REGISTRY=https://hub.go-nerd.de
+    commands:
+    - for TAG in $(cat digests.txt); do echo docker-rm $${REPO}:$TAG --registry $${REGISTRY} --basic-auth --user $${REGISTRY_USER} --password $${REGISTRY_PASS}; done
+    secrets: [ REGISTRY_USER, REGISTRY_PASS ]

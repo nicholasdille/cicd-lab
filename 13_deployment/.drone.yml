@@ -1,0 +1,15 @@
+pipeline:
+
+  prepare:
+    image: hub.go-nerd.de/groot/tools
+    commands:
+    - echo -n "$${KUBE_CONFIG}" > ./kubeconfig
+    secrets: [ kube_config ]
+
+  deploy:
+    image: hub.go-nerd.de/groot/tools
+    environment:
+    - OWNCLOUD_VERSION=10.0
+    - DNS_DOMAIN=go-nerd.de
+    commands:
+    - cat owncloud.yml | envsubst | kubectl --kubeconfig ./kubeconfig apply -f -
