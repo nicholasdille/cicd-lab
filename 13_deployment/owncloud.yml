@@ -42,7 +42,7 @@
         traefik.ingress.kubernetes.io/redirect-entry-point: https
     spec:
       rules:
-      - host: owncloud.${DNS_DOMAIN}
+      - host: owncloud-${DRONE_REPO_OWNER}.${DNS_DOMAIN}
         http:
           paths:
           - path: /
