@@ -1,15 +1,27 @@
 pipeline:
 
-  prepare:
-    image: hub.go-nerd.de/groot/tools
+  fetch:
+    image: registry:5000/groot/tools
     commands:
-    - echo -n "$${KUBE_CONFIG}" > ./kubeconfig
-    secrets: [ kube_config ]
+    - curl -f -u "$${WEBDAV_USER}:$${WEBDAV_PASS}" -o ca.crt https://webdav.dille.io/ca.crt
+    - curl -f -u "$${WEBDAV_USER}:$${WEBDAV_PASS}" -o ${DRONE_REPO_OWNER}.crt https://webdav.dille.io/${DRONE_REPO_OWNER}.crt
+    - curl -f -u "$${WEBDAV_USER}:$${WEBDAV_PASS}" -o ${DRONE_REPO_OWNER}.key https://webdav.dille.io/${DRONE_REPO_OWNER}.key
+    secrets: [ WEBDAV_USER, WEBDAV_PASS ]
+
+  prepare:
+    image: registry:5000/groot/tools
+    environment:
+    - CLUSTER=https://159.69.196.93:6443
+    commands:
+    - kubectl config set-cluster kubernetes --server=${CLUSTER} --certificate-authority=./ca.crt --embed-certs
+    - kubectl config set-credentials ${DRONE_REPO_OWNER} --client-key=./${DRONE_REPO_OWNER}.key --client-certificate=./${DRONE_REPO_OWNER}.crt --embed-certs
+    - kubectl config set-context kubernetes-context --cluster=kubernetes --user=${DRONE_REPO_OWNER} --namespace=${DRONE_REPO_OWNER}
+    - kubectl config use-context kubernetes-context
 
   deploy:
     image: hub.go-nerd.de/groot/tools
     environment:
     - OWNCLOUD_VERSION=10.0
-    - DNS_DOMAIN=go-nerd.de
+    - DNS_DOMAIN=dille.io
     commands:
     - cat owncloud.yml | envsubst | kubectl --kubeconfig ./kubeconfig apply -f -
